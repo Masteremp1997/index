@@ -67,7 +67,7 @@
     const addSalesmanBtn = document.getElementById('addSalesman');
 
     let data = JSON.parse(localStorage.getItem('cashData')) || [];
-    let salesmen = JSON.parse(localStorage.getItem('salesmen')) || ['Haresh Kaka', 'Rohit', 'Sahil'];
+    let salesmen = JSON.parse(localStorage.getItem('salesmen')) || ['Haresh Kaka', 'Rohit', 'Sahil','Other'];
     let selectedDate = new Date().toISOString().split('T')[0];
     dateInput.value = selectedDate;
     let isCashIn = true;
@@ -150,18 +150,25 @@
       const wb = XLSX.utils.book_new();
       const filteredData = data.filter(e => e.date === dateInput.value);
 
+      // ✅ Define all payment columns
+      const paymentModes = [
+        'Cash', 'Online', 'Tally', 'KB', 'Bank Transfer', 'Kasar',
+        'Return', 'Transport', 'Kharch', 'Party/Vyapari', 'Labour'
+      ];
+
       const rows = [
-        ['Date', 'Type', 'Amount', 'Description', 'Salesman', 'Payment Mode']
+        ['Date', 'Type', 'Amount', 'Description', 'Salesman', ...paymentModes]
       ];
 
       filteredData.forEach(e => {
+        const paymentCols = paymentModes.map(pm => (e.payment === pm ? e.amount : ''));
         rows.push([
           e.date,
           e.type === 'in' ? 'Cash In' : 'Cash Out',
           e.amount,
           e.desc,
           e.salesman,
-          e.payment
+          ...paymentCols
         ]);
       });
 
