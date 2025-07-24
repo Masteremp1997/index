@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Master Hardware & Paint Mart - Cash Manager</title>
+
+  <!-- ✅ XLSX CDN (SheetJS) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <!-- ✅ jsPDF (for PDF download) -->
+  <script src="jspdf.umd.min.js"></script>
+  <!-- ✅ Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen p-6">
+  <h1 class="text-3xl font-bold mb-4 text-orange-600 text-center">Master Hardware & Paint Mart</h1>
+  <div class="max-w-6xl mx-auto bg-white p-6 rounded-lg shadow-lg">
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+      <div>
+        <label class="block text-sm font-medium text-gray-700">Select Date</label>
+        <input id="dateInput" type="date" class="mt-1 p-2 border rounded" />
+      </div>
+      <div>
+        <button id="toggleMode" class="px-4 py-2 bg-blue-600 text-white rounded">Switch to Cash Out</button>
+      </div>
+    </div>
+    <div class="mb-6">
+      <h2 id="formTitle" class="text-xl font-semibold mb-4">Add Cash In Entry</h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <input id="amount" type="number" placeholder="Amount" class="p-2 border rounded" />
+        <div class="flex gap-2">
+          <select id="salesman" class="p-2 border rounded flex-1"></select>
+          <button id="addSalesman" class="px-2 py-2 bg-green-500 text-white rounded">+ Add</button>
+        </div>
+        <input id="description" type="text" placeholder="Description" class="p-2 border rounded" />
+        <select id="paymentMode" class="p-2 border rounded"></select>
+      </div>
+      <button id="saveEntry" class="mt-4 px-4 py-2 bg-blue-600 text-white rounded">Save Entry</button>
+    </div>
+    <div id="summary" class="space-y-6"></div>
+    <div class="mt-6 flex flex-wrap gap-4">
+      <button id="downloadPDF" class="px-4 py-2 bg-purple-600 text-white rounded">Download PDF</button>
+      <button id="downloadExcel" class="px-4 py-2 bg-green-600 text-white rounded">Download Excel</button>
+    </div>
+  </div>
+
+  <script>
+    const dateInput = document.getElementById('dateInput');
+    const toggleMode = document.getElementById('toggleMode');
+    const formTitle = document.getElementById('formTitle');
+    const paymentMode = document.getElementById('paymentMode');
+    const saveEntry = document.getElementById('saveEntry');
+    const summary = document.getElementById('summary');
+    const downloadPDF = document.getElementById('downloadPDF');
+    const downloadExcel = document.getElementById('downloadExcel');
+    const salesmanSelect = document.getElementById('salesman');
+    const addSalesmanBtn = document.getElementById('addSalesman');
+
+    let data = JSON.parse(localStorage.getItem('cashData')) || [];
+    let salesmen = JSON.parse(localStorage.getItem('salesmen')) || ['Haresh Kaka', 'Rohit', 'Sahil','Other'];
+    let selectedDate = new Date().toISOString().split('T')[0];
+    dateInput.value = selectedDate;
+    let isCashIn = true;
+
+    function renderSalesmen() {
+      salesmanSelect.innerHTML = '';
+      salesmen.forEach(name => {
+        const option = document.createElement('option');
+        option.value = name;
+        option.textContent = name;
+        salesmanSelect.appendChild(option);
+      });
+    }
+
+    function renderPaymentOptions() {
+      paymentMode.innerHTML = '';
+      const inOptions = ['Cash', 'Online', 'Tally', 'KB', 'Bank Transfer', 'Kasar'];
+      const outOptions = ['Return', 'Transport', 'Kharch', 'Party/Vyapari', 'Labour'];
+      (isCashIn ? inOptions : outOptions).forEach(opt => {
+        const option = document.createElement('option');
+        option.value = opt;
+        option.textContent = opt;
+        paymentMode.appendChild(option);
+      });
+    }
+
+    renderSalesmen();
+    renderPaymentOptions();
+
+    addSalesmanBtn.onclick = () => {
+      const newSalesman = prompt('Enter new salesman name:');
+      if (newSalesman && !salesmen.includes(newSalesman)) {
+        salesmen.push(newSalesman);
+        localStorage.setItem('salesmen', JSON.stringify(salesmen));
+        renderSalesmen();
+        salesmanSelect.value = newSalesman;
+      }
+    };
+
+    toggleMode.onclick = () => {
+      isCashIn = !isCashIn;
+      formTitle.textContent = isCashIn ? 'Add Cash In Entry' : 'Add Cash Out Entry';
+      toggleMode.textContent = isCashIn ? 'Switch to Cash Out' : 'Switch to Cash In';
+      renderPaymentOptions();
+    };
+
+    function saveData() {
+      localStorage.setItem('cashData', JSON.stringify(data));
+    }
+
+    saveEntry.onclick = () => {
+      const amount = document.getElementById('amount').value.trim();
+      const desc = document.getElementById('description').value.trim();
+      const salesman = salesmanSelect.value;
+      const payment = paymentMode.value;
+      if (!amount || !salesman || !payment) {
+        alert('Fill all fields.');
+        return;
+      }
+      data.push({ date: dateInput.value, type: isCashIn ? 'in' : 'out', amount, desc, salesman, payment });
+      saveData();
+      renderSummary();
+      document.getElementById('amount').value = '';
+      document.getElementById('description').value = '';
+    };
+
+    function renderSummary() {
+      summary.innerHTML = '';
+      let table = `<table class='w-full border'><thead><tr><th>Type</th><th>Amount</th><th>Description</th><th>Salesman</th><th>Payment</th></tr></thead><tbody>`;
+      data.forEach(e => {
+        if (e.date === dateInput.value) {
+          table += `<tr><td>${e.type === 'in' ? 'Cash In' : 'Cash Out'}</td><td>${e.amount}</td><td>${e.desc}</td><td>${e.salesman}</td><td>${e.payment}</td></tr>`;
+        }
+      });
+      table += '</tbody></table>';
+      summary.innerHTML = table;
+    }
+
+    downloadExcel.onclick = () => {
+      const wb = XLSX.utils.book_new();
+
+      const inData = data.filter(e => e.date === dateInput.value && e.type === 'in');
+      const outData = data.filter(e => e.date === dateInput.value && e.type === 'out');
+
+      if (inData.length > 0) {
+        const wsIn = XLSX.utils.json_to_sheet(inData);
+        XLSX.utils.book_append_sheet(wb, wsIn, 'Cash In');
+      }
+
+      if (outData.length > 0) {
+        const wsOut = XLSX.utils.json_to_sheet(outData);
+        XLSX.utils.book_append_sheet(wb, wsOut, 'Cash Out');
+      }
+
+      XLSX.writeFile(wb, 'Cash_Summary.xlsx');
+    };
+
+    downloadPDF.onclick = () => {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+      doc.text('Cash Summary', 10, 10);
+      let y = 20;
+      data.filter(e => e.date === dateInput.value).forEach(e => {
+        doc.text(`${e.type} | ${e.amount} | ${e.desc} | ${e.salesman} | ${e.payment}`, 10, y);
+        y += 10;
+      });
+      doc.save('Cash_Summary.pdf');
+    };
+
+    renderSummary();
+  </script>
+</body>
+</html>
