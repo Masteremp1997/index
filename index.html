@@ -5,15 +5,20 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Master Hardware & Paint Mart - Cash Manager</title>
 
-  <!-- ✅ XLSX CDN (SheetJS) -->
+  <!-- ✅ SheetJS XLSX for Excel -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-  <!-- ✅ jsPDF (for PDF download) -->
+
+  <!-- ✅ jsPDF for PDF -->
   <script src="jspdf.umd.min.js"></script>
-  <!-- ✅ Tailwind CSS -->
+
+  <!-- ✅ Tailwind for styling -->
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-100 min-h-screen p-6">
-  <h1 class="text-3xl font-bold mb-4 text-orange-600 text-center">Master Hardware & Paint Mart</h1>
+  <h1 class="text-3xl font-bold mb-4 text-orange-600 text-center">
+    Master Hardware &amp; Paint Mart
+  </h1>
+
   <div class="max-w-6xl mx-auto bg-white p-6 rounded-lg shadow-lg">
     <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
       <div>
@@ -21,9 +26,12 @@
         <input id="dateInput" type="date" class="mt-1 p-2 border rounded" />
       </div>
       <div>
-        <button id="toggleMode" class="px-4 py-2 bg-blue-600 text-white rounded">Switch to Cash Out</button>
+        <button id="toggleMode" class="px-4 py-2 bg-blue-600 text-white rounded">
+          Switch to Cash Out
+        </button>
       </div>
     </div>
+
     <div class="mb-6">
       <h2 id="formTitle" class="text-xl font-semibold mb-4">Add Cash In Entry</h2>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -37,7 +45,9 @@
       </div>
       <button id="saveEntry" class="mt-4 px-4 py-2 bg-blue-600 text-white rounded">Save Entry</button>
     </div>
+
     <div id="summary" class="space-y-6"></div>
+
     <div class="mt-6 flex flex-wrap gap-4">
       <button id="downloadPDF" class="px-4 py-2 bg-purple-600 text-white rounded">Download PDF</button>
       <button id="downloadExcel" class="px-4 py-2 bg-green-600 text-white rounded">Download Excel</button>
@@ -57,7 +67,7 @@
     const addSalesmanBtn = document.getElementById('addSalesman');
 
     let data = JSON.parse(localStorage.getItem('cashData')) || [];
-    let salesmen = JSON.parse(localStorage.getItem('salesmen')) || ['Haresh Kaka', 'Rohit', 'Sahil','Other'];
+    let salesmen = JSON.parse(localStorage.getItem('salesmen')) || ['Haresh Kaka', 'Rohit', 'Sahil'];
     let selectedDate = new Date().toISOString().split('T')[0];
     dateInput.value = selectedDate;
     let isCashIn = true;
@@ -138,20 +148,25 @@
 
     downloadExcel.onclick = () => {
       const wb = XLSX.utils.book_new();
+      const filteredData = data.filter(e => e.date === dateInput.value);
 
-      const inData = data.filter(e => e.date === dateInput.value && e.type === 'in');
-      const outData = data.filter(e => e.date === dateInput.value && e.type === 'out');
+      const rows = [
+        ['Date', 'Type', 'Amount', 'Description', 'Salesman', 'Payment Mode']
+      ];
 
-      if (inData.length > 0) {
-        const wsIn = XLSX.utils.json_to_sheet(inData);
-        XLSX.utils.book_append_sheet(wb, wsIn, 'Cash In');
-      }
+      filteredData.forEach(e => {
+        rows.push([
+          e.date,
+          e.type === 'in' ? 'Cash In' : 'Cash Out',
+          e.amount,
+          e.desc,
+          e.salesman,
+          e.payment
+        ]);
+      });
 
-      if (outData.length > 0) {
-        const wsOut = XLSX.utils.json_to_sheet(outData);
-        XLSX.utils.book_append_sheet(wb, wsOut, 'Cash Out');
-      }
-
+      const ws = XLSX.utils.aoa_to_sheet(rows);
+      XLSX.utils.book_append_sheet(wb, ws, 'Cash Summary');
       XLSX.writeFile(wb, 'Cash_Summary.xlsx');
     };
 
